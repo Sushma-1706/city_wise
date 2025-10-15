@@ -9,6 +9,7 @@ import Track from "./pages/Track";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -24,7 +25,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
-        </Routes>
+         </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { MapPin, Upload } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 const Report = () => {
   const navigate = useNavigate();
@@ -17,25 +17,68 @@ const Report = () => {
     description: "",
     category: "",
     location: "",
+    photo: "", // base64 string
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Handle photo upload
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData((prev) => ({ ...prev, photo: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title || !formData.description || !formData.category || !formData.location) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    // TODO: Submit to backend when database is set up
-    toast.success("Issue reported successfully!");
+    // Save to localStorage
+    const existingReports = JSON.parse(localStorage.getItem("reports") || "[]");
+    const newReport = {
+      ...formData,
+      status: "pending",
+      date: new Date().toLocaleDateString(),
+    };
+    localStorage.setItem("reports", JSON.stringify([...existingReports, newReport]));
+
+    // Send email via backend
+    try {
+      const response = await fetch("http://localhost:5000/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newReport.title,
+          description: newReport.description,
+          location: newReport.location,
+          photo: newReport.photo,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success("Issue reported and email sent successfully!");
+      } else {
+        toast.error("Issue reported but email failed to send.");
+        console.error(await response.json());
+      }
+    } catch (error) {
+      console.error("Email failed", error);
+      toast.error("Issue reported but email failed to send.");
+    }
+
     navigate("/track");
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
       <div className="container py-12">
         <div className="max-w-2xl mx-auto space-y-8">
           <div className="space-y-2">
@@ -120,15 +163,19 @@ const Report = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="photo">Photo (Optional)</Label>
-                  <div className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                    <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      Click to upload or drag and drop
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      PNG, JPG up to 10MB
-                    </p>
-                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="block w-full text-sm text-muted-foreground"
+                  />
+                  {formData.photo && (
+                    <img
+                      src={formData.photo}
+                      alt="Preview"
+                      className="mt-2 max-h-40 object-contain rounded-md"
+                    />
+                  )}
                 </div>
 
                 <div className="flex gap-4 pt-4">
